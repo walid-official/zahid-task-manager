@@ -7,10 +7,9 @@ const cors = require("cors");
 const app = express();
 const port = process.env.PORT || 5000;
 
-// middleware
+// Middleware
 app.use(
   cors({
-    // set origin of production site
     origin: [
       "http://localhost:5173",
       "http://localhost:5174",
@@ -23,29 +22,26 @@ app.use(
 app.use(express.json());
 app.use(cookieParser());
 
-// custom middleware for jwt verify
+// JWT Verification Middleware
 const verifyJWT = (req, res, next) => {
   const token = req.cookies?.token;
 
   if (!token) {
-    return res.status(401).send({ message: "Unauthorize Access" });
+    return res.status(401).send({ message: "Unauthorized Access" });
   }
 
-  // verify both tokens
   jwt.verify(token, process.env.ACCESS_TOKEN, (error, decoded) => {
     if (error) {
-      return res.status(401).send({ message: "Unauthorize Access" });
+      return res.status(401).send({ message: "Unauthorized Access" });
     }
-    // creating a new property in req object
     req.decodedToken = decoded;
     next();
   });
 };
 
-// MongoDB
-const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster1.rjxsn.mongodb.net/?retryWrites=true&w=majority&appName=Cluster1`;
+// MongoDB Connection
+const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.pxdhv.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0;`;
 
-// Create a MongoClient
 const client = new MongoClient(uri, {
   serverApi: {
     version: ServerApiVersion.v1,
@@ -56,18 +52,17 @@ const client = new MongoClient(uri, {
 
 async function run() {
   try {
-    // database
     const database = client.db("taskDB");
     const usersCollection = database.collection("usersCollection");
     const tasksCollection = database.collection("tasksCollection");
 
-    // jwt token generate (only for personal info based route)
+    // JWT Token Generate
     app.post("/jwt", (req, res) => {
       const user = req.body;
-
       const token = jwt.sign(user, process.env.ACCESS_TOKEN, {
         expiresIn: "1h",
       });
+
       res
         .cookie("token", token, {
           httpOnly: true,
@@ -77,7 +72,7 @@ async function run() {
         .send({ login: true });
     });
 
-    // jwt token remove
+    // JWT Token Remove
     app.post("/jwtRemove", (req, res) => {
       res
         .clearCookie("token", {
@@ -88,73 +83,138 @@ async function run() {
         .send({ logout: true });
     });
 
-    // verify token in private info route ( Demo )
-    app.get("/privateInfo/:email", verifyJWT, (req, res) => {
-      const email = req.params.email;
-
-      // verify token email
-      if (req.decodedToken.email !== email) {
-        return res.status(403).send({ message: "Forbidden Access" });
-      }
-
-      res.send("Sent Database Data based on paramas email");
-    });
-
-    // read Operation
+    // Home Route
     app.get("/", (req, res) => {
       res.send("Server Connected Successfully");
     });
 
-    // tasks
-    app.get("/tasks/:email", async (req, res) => {
+    // Protected Route Example
+    app.get("/privateInfo/:email", verifyJWT, (req, res) => {
       const email = req.params.email;
-      const result = await tasksCollection.find({ email }).toArray();
-      res.send(result);
+      if (req.decodedToken.email !== email) {
+        return res.status(403).send({ message: "Forbidden Access" });
+      }
+      res.send("Sent Database Data based on parameter email");
     });
 
-    // create Operation (create User)
+    // ------------------- USERS ROUTES -------------------
+
+    // Create User
     app.post("/users", async (req, res) => {
       const user = req.body;
+      const existingUser = await usersCollection.findOne({ email: user.email });
 
-      // validate existing user
-      const query = { email: user.email };
-      const existingUser = await usersCollection.findOne(query);
       if (existingUser) {
-        return res.send({ message: "User Already Exist", insertedId: null });
+        return res.send({ message: "User Already Exists", insertedId: null });
       }
 
       const result = await usersCollection.insertOne(user);
       res.send(result);
     });
 
-    // task
+    // ------------------- TASKS ROUTES -------------------
+
+    // Create Task
     app.post("/tasks", async (req, res) => {
       const task = req.body;
-      const result = await tasksCollection.insertOne(task);
-      res.send(result);
+      console.log(task);
+      try {
+        const result = await tasksCollection.insertOne(task);
+        res.send(result);
+      } catch (err) {
+        res.status(500).send({ message: "Failed to create task" });
+      }
     });
 
-    // update Operation
+    // Get Tasks by User Email
+    app.get("/tasks/:email", async (req, res) => {
+      const email = req.params.email;
+      try {
+        const result = await tasksCollection.find({ email }).toArray();
+        res.send(result);
+      } catch (err) {
+        res.status(500).send({ message: "Failed to fetch tasks" });
+      }
+    });
+
+    // Update Task (Title or Category)
     app.patch("/tasks/:id", async (req, res) => {
       const id = req.params.id;
-      const title = req.body.title;
-      const query = { _id: new ObjectId(id) };
-      const updatedTitle = {
-        $set: { title },
-      };
+      const { title, category } = req.body;
 
-      const result = await tasksCollection.updateOne(query, updatedTitle);
+      const updateFields = {};
+      if (title) updateFields.title = title;
+      if (category) updateFields.category = category;
+
+      try {
+        const result = await tasksCollection.updateOne(
+          { _id: new ObjectId(id) },
+          { $set: updateFields }
+        );
+        res.send(result);
+      } catch (err) {
+        res.status(500).send({ message: "Failed to update task" });
+      }
+    });
+
+    // Delete Task
+    app.delete("/tasks/:id", async (req, res) => {
+      const id = req.params.id;
+      try {
+        const result = await tasksCollection.deleteOne({
+          _id: new ObjectId(id),
+        });
+        res.send(result);
+      } catch (err) {
+        res.status(500).send({ message: "Failed to delete task" });
+      }
+    });
+
+    // update task operation
+
+    app.get("/singleTasks/:id", async (req, res) => {
+      const taskId = req.params.id;
+      const result = await tasksCollection.findOne({
+        _id: new ObjectId(taskId),
+      });
       res.send(result);
     });
 
 
+    app.patch("/updateTasks/:id", async (req, res) => {
+      const taskId = req.params.id;
+      const updateTask = req.body;
+      console.log("Updating Task:", updateTask);
     
-  } finally {
+      try {
+        const result = await tasksCollection.updateOne(
+          { _id: new ObjectId(taskId) },
+          { $set: updateTask } // ✅ No need to spread, directly set
+        );
+    
+        if (result.modifiedCount === 0) {
+          return res
+            .status(404)
+            .send({ message: "Task not found or already updated" });
+        }
+        res.send({ message: "Task updated successfully", result });
+      } catch (error) {
+        console.error("Error updating task:", error);
+        res.status(500).send({ message: "Internal Server Error" });
+      }
+    });
+    
+
+
+  } catch (err) {
+    console.error(err);
   }
+
+  
 }
 run().catch(console.log);
 
-// port running on
+// Start Server
 app.listen(port, () => {
   console.log(`Server Running on... : ${port}`);
 });
