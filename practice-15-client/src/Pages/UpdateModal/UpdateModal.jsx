@@ -2,42 +2,49 @@ import React, { useEffect, useState } from "react";
 import { FaTimes } from "react-icons/fa";
 import useAxiosPublic from "../../Auth/Hook/useAxiosPublic";
 
-
 const UpdateModal = ({ singleTaskData, refetchTasks }) => {
   const axiosPublic = useAxiosPublic();
   const [title, setTitle] = useState(singleTaskData?.title || "");
   const [description, setDescription] = useState(singleTaskData?.description || "");
 
-  useEffect(() => {
-    if (singleTaskData) {
-      setTitle(singleTaskData?.title || "");
-      setDescription(singleTaskData?.description || "");
-    }
-  }, [singleTaskData]);
+  // const [singleTaskId, setSingleTaskId] = useState(taskId);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-  
-    const updateData = {
-      title,
-      description,
-      category: singleTaskData?.category, // ✅ Ensure category is sent
-    };
-  
-    try {
-      const { data } = await axiosPublic.patch(
-        `/updateTasks/${singleTaskData.taskId}`,
-        updateData
-      );
-      console.log("✅ Task updated:", data);
-  
-      refetchTasks(); // ✅ Refetch after update
-      document.getElementById("my_modal_2").close();
-    } catch (err) {
-      console.error("❌ Error updating task:", err);
-    }
-  };
-  
+  console.log(singleTaskData._id);
+
+const handleUpdateTask = async (title,description,taskId) => {
+  console.log(title,description,taskId);
+  const updateData = {
+    title,description
+  }
+  console.log(updateData);
+
+  // Update state when singleTaskData changes
+  // useEffect(() => {
+  //   if (singleTaskData) {
+  //     setTitle(singleTaskData.title || "");
+  //     setDescription(singleTaskData.description || "");
+  //   }
+  // }, [singleTaskData]);
+
+
+  try {
+    const { data } = await axiosPublic.patch(
+      `/update-task/${taskId}`,
+      updateData
+    );
+    console.log("✅ Task updated:", data);
+
+    refetchTasks(); // Refetch tasks to update UI
+    document.getElementById("my_modal_2").close();
+  } catch (err) {
+    console.log("❌ Error updating task:", err);
+  }
+}
+
+
+
+
+
 
 
   return (
@@ -54,13 +61,13 @@ const UpdateModal = ({ singleTaskData, refetchTasks }) => {
 
           <h2 className="text-xl font-bold text-center mb-4">Update Task</h2>
 
-          <form onSubmit={handleSubmit}>
+          <div>
             {/* Title Input */}
             <div className="form-control">
               <label className="py-2 font-semibold">Title</label>
               <input
                 type="text"
-                defaultValue={title}
+                defaultValue={singleTaskData?.title}
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="Task Title"
                 className="input input-bordered"
@@ -73,7 +80,7 @@ const UpdateModal = ({ singleTaskData, refetchTasks }) => {
               <label className="py-2 font-semibold">Description</label>
               <input
                 type="text"
-                defaultValue={description}
+                defaultValue={singleTaskData?.description}
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="Task Description"
                 className="input input-bordered"
@@ -83,13 +90,14 @@ const UpdateModal = ({ singleTaskData, refetchTasks }) => {
             {/* Submit Button */}
             <div className="form-control mt-6">
               <button
+              onClick={() => handleUpdateTask(title,description,singleTaskData._id)}
                 type="submit"
                 className="bg-gradient-to-r from-[#007bff] to-[#007bff] px-8 py-3 rounded-full text-white font-medium"
               >
                 Update Task
               </button>
             </div>
-          </form>
+          </div>
         </div>
       </dialog>
     </div>

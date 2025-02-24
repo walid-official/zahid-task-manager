@@ -11,9 +11,10 @@ const TaskColumn = ({ category, tasks, handleDeleteTask, refetchTasks }) => {
 
   const handleUpdateModal = async (taskId) => {
     document.getElementById("my_modal_2").showModal();
+    console.log(taskId);
     try {
       const { data } = await axiosPublic.get(`/singleTasks/${taskId}`);
-      setSingleTaskData({ ...data, taskId, category: data.category }); // ✅ Ensure category is set
+      setSingleTaskData({ ...data}); // ✅ Ensure category is set
     } catch (err) {
       console.log(err);
     }

@@ -181,28 +181,31 @@ async function run() {
     });
 
 
-    app.patch("/updateTasks/:id", async (req, res) => {
-      const taskId = req.params.id;
-      const updateTask = req.body;
-      console.log("Updating Task:", updateTask);
-    
-      try {
-        const result = await tasksCollection.updateOne(
-          { _id: new ObjectId(taskId) },
-          { $set: updateTask } // ✅ No need to spread, directly set
-        );
-    
-        if (result.modifiedCount === 0) {
-          return res
-            .status(404)
-            .send({ message: "Task not found or already updated" });
-        }
-        res.send({ message: "Task updated successfully", result });
-      } catch (error) {
-        console.error("Error updating task:", error);
-        res.status(500).send({ message: "Internal Server Error" });
+    app.patch('/update-task/:id', async (req, res) => {
+      const { id } = req.params;
+      const updateData = req.body;
+  console.log(updateData);
+      // Validate ObjectId
+      if (!ObjectId.isValid(id)) {
+          return res.status(400).send({ error: 'Invalid Task ID' });
       }
-    });
+  
+      try {
+          const result = await tasksCollection.updateOne(
+              { _id: new ObjectId(id) },
+              { $set: { ...updateData } }
+          );
+  
+          if (result.matchedCount === 0) {
+              return res.status(404).send({ error: 'Task not found' });
+          }
+  
+          res.send({ message: 'Task updated successfully' });
+      } catch (err) {
+          console.error('Error updating task:', err);
+          res.status(500).send({ error: 'Internal Server Error' });
+      }
+  });
     
 
 
