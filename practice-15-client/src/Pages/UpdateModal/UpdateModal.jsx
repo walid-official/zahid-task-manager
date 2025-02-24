@@ -6,46 +6,27 @@ const UpdateModal = ({ singleTaskData, refetchTasks }) => {
   const axiosPublic = useAxiosPublic();
   const [title, setTitle] = useState(singleTaskData?.title || "");
   const [description, setDescription] = useState(singleTaskData?.description || "");
+console.log(singleTaskData);
 
-  // const [singleTaskId, setSingleTaskId] = useState(taskId);
-
-  console.log(singleTaskData._id);
-
-const handleUpdateTask = async (title,description,taskId) => {
-  console.log(title,description,taskId);
-  const updateData = {
-    title,description
+useEffect(() => {
+  if (singleTaskData) {
+    setTitle(singleTaskData.title || "");
+    setDescription(singleTaskData.description || "");
   }
-  console.log(updateData);
-
-  // Update state when singleTaskData changes
-  // useEffect(() => {
-  //   if (singleTaskData) {
-  //     setTitle(singleTaskData.title || "");
-  //     setDescription(singleTaskData.description || "");
-  //   }
-  // }, [singleTaskData]);
+}, [singleTaskData]);
 
 
-  try {
-    const { data } = await axiosPublic.patch(
-      `/update-task/${taskId}`,
-      updateData
-    );
-    console.log("✅ Task updated:", data);
-
-    refetchTasks(); // Refetch tasks to update UI
-    document.getElementById("my_modal_2").close();
-  } catch (err) {
-    console.log("❌ Error updating task:", err);
-  }
-}
-
-
-
-
-
-
+  const handleUpdateTask = async (title, description, taskId) => {
+    const updateData = { title, description };
+    try {
+      const { data } = await axiosPublic.patch(`/update-task/${taskId}`, updateData);
+      console.log("✅ Task updated:", data);
+      refetchTasks(); // Refetch tasks to update UI
+      document.getElementById("my_modal_2").close();
+    } catch (err) {
+      console.log("❌ Error updating task:", err);
+    }
+  };
 
   return (
     <div>
@@ -67,7 +48,7 @@ const handleUpdateTask = async (title,description,taskId) => {
               <label className="py-2 font-semibold">Title</label>
               <input
                 type="text"
-                defaultValue={singleTaskData?.title}
+                value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="Task Title"
                 className="input input-bordered"
@@ -80,7 +61,7 @@ const handleUpdateTask = async (title,description,taskId) => {
               <label className="py-2 font-semibold">Description</label>
               <input
                 type="text"
-                defaultValue={singleTaskData?.description}
+                value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="Task Description"
                 className="input input-bordered"
@@ -90,7 +71,7 @@ const handleUpdateTask = async (title,description,taskId) => {
             {/* Submit Button */}
             <div className="form-control mt-6">
               <button
-              onClick={() => handleUpdateTask(title,description,singleTaskData._id)}
+                onClick={() => handleUpdateTask(title, description, singleTaskData._id)}
                 type="submit"
                 className="bg-gradient-to-r from-[#007bff] to-[#007bff] px-8 py-3 rounded-full text-white font-medium"
               >
